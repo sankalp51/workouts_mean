@@ -1,46 +1,51 @@
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import axios from "axios";
 import { useWorkoutContext } from "../hooks/useWorkoutsContext";
 
 const WorkoutForm = () => {
+    const errorStateObj = {
+        error: false,
+        titleError: false,
+        loadError: false,
+        repsError: false,
+        message: ''
+    }
+
+    const errorReducer = (state, action) => {
+        switch (action.type) {
+            case 'TITLE_ERROR':
+                return { ...errorStateObj, error: true, message: 'Valid title is required', titleError: true }
+            case 'LOAD_ERROR':
+                return { ...errorStateObj, error: true, message: 'Valid load value is required', loadError: true }
+            case 'REP_ERROR':
+                return { ...errorStateObj, error: true, message: 'Valid reps value is required', repsError: true }
+            case 'SERVER_ERROR':
+                return { ...errorStateObj, error: true, message: 'Sorry! could not add workout due to server issue' }
+            case 'RESET':
+                return { ...errorStateObj }
+            default:
+                return { ...state }
+        }
+    }
+
+
+    const [errorState, errorDispatch] = useReducer(errorReducer, errorStateObj);
     const { dispatch } = useWorkoutContext();
     const [title, setTitle] = useState('');
     const [load, setLoad] = useState('');
     const [reps, setReps] = useState('');
-    const [error, setError] = useState({
-        errorState: false,
-        message: ''
-    })
 
     const handleSubmit = async e => {
         e.preventDefault();
         try {
             if (title.trim() === '' || !isNaN(title)) {
-                setError(prevState => {
-                    return {
-                        ...prevState,
-                        errorState: true,
-                        message: 'Valid title is required'
-                    }
-                })
+                errorDispatch({ type: 'TITLE_ERROR' });
             }
             else if (load.trim() === '' || typeof +load !== 'number') {
-                setError(prevState => {
-                    return {
-                        ...prevState,
-                        errorState: true,
-                        message: 'Valid load value is required'
-                    }
-                })
+                errorDispatch({ type: 'LOAD_ERROR' });
             }
             else if (reps.trim() === '' || typeof +reps !== 'number') {
-                setError(prevState => {
-                    return {
-                        ...prevState,
-                        errorState: true,
-                        message: 'Valid reps value is required'
-                    }
-                })
+                errorDispatch({ type: 'REP_ERROR' })
             }
             else {
                 const workout = {
@@ -57,16 +62,14 @@ const WorkoutForm = () => {
         }
         catch (err) {
             if (err.response && err.response.status >= 500 && err.response.status < 600) {
-                setError({
-                    errorState: true,
-                    message: 'Could not upload workout due to a server issue. Please try again later.',
-                });
+                // setError({
+                //     errorState: true,
+                //     message: 'Could not upload workout due to a server issue. Please try again later.',
+                // });
+                errorDispatch({ type: 'SERVER_ERROR' });
             } else {
                 console.error('Error uploading workout:', err);
-                setError({
-                    errorState: true,
-                    message: 'An unexpected error occurred. Please try again.',
-                });
+                errorDispatch({ type: 'SERVER_ERROR' });
             }
         }
     }
@@ -76,31 +79,34 @@ const WorkoutForm = () => {
             <h3>Add a new Workout</h3>
             <label>Exercise title</label>
             <input
+                style={{ background: errorState.titleError && '#FFCCCC' }}
                 type="text"
                 value={title}
                 onChange={e => { setTitle(e.target.value) }}
-                onFocus={() => setError(prevState => { return { ...prevState, errorState: false } })}
+                onFocus={() => errorDispatch({ type: 'RESET' })}
             />
 
             <label>Load (kg)</label>
             <input
+             style={{ background: errorState.loadError && '#FFCCCC' }}
                 type="number"
                 value={load}
                 onChange={e => { setLoad(e.target.value) }}
-                onFocus={() => setError(prevState => { return { ...prevState, errorState: false } })}
+                onFocus={() => errorDispatch({ type: 'RESET' })}
             />
 
             <label>Reps</label>
             <input
+             style={{ background: errorState.repsError && '#FFCCCC' }}
                 type="number"
                 value={reps}
                 onChange={e => { setReps(e.target.value) }}
-                onFocus={() => setError(prevState => { return { ...prevState, errorState: false } })}
+                onFocus={() => errorDispatch({ type: 'RESET' })}
             />
 
             <button>Add Workout</button>
-            {error.errorState && <div className="error">
-                {error.message}
+            {errorState.error && <div className="error">
+                {errorState.message}
             </div>}
         </form>
     )

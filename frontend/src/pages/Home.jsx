@@ -19,7 +19,7 @@ const Home = () => {
             }
         };
         fetchData();
-    }, []);
+    }, [dispatch]);
 
     const noWorkouts = <p className="no-workouts">No workouts available</p>;
 
